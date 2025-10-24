@@ -9,6 +9,7 @@
     "axios": "^1.12.2",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
+    "googleapis": "^164.1.0",
     "nodemailer": "^7.0.9",
     "sap-cf-mailer": "^0.0.5"
   },

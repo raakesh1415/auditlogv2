@@ -38,3 +38,4 @@ mta_archives/
 .env
 mtls-certificate.pem
 mtls-private-key.pem
+get-refresh-token.js
