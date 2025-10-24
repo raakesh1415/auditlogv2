@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-async function sendEmail(textFilePath) {
+async function sendEmail(textFilePaths) {
     console.log('---Begin of Sending Email---');
     
     try {
@@ -28,46 +28,70 @@ async function sendEmail(textFilePath) {
         await transporter.verify();
         console.log('SMTP connection verified successfully');
         
-        const fileName = path.basename(textFilePath);
+        const totalFiles = textFilePaths.length;
         
-        const mailOptions = {
-            from: process.env.EMAIL_FROM,
-            to: process.env.EMAIL_TO,
-            subject: 'Audit Log Retrieval - Success',
-            html: `
-                <html>
-                    <body>
-                        <h2>Audit Log Retrieval - Success</h2>
-                        <p>The audit log retrieval has been completed successfully.</p>
-                        <p>Please find the audit logs in the attached text file.</p>
-                    </body>
-                </html>
-            `,
-            attachments: [
-                {
-                    filename: fileName,
-                    path: textFilePath
-                }
-            ]
-        };
-        
-        const info = await transporter.sendMail(mailOptions);
-        console.log(`Email sent successfully: ${info.messageId}`);
-        
-        // Clean up the file after sending
-        fs.unlinkSync(textFilePath);
-        console.log(`Temporary file deleted: ${fileName}`);
+        // Send each file as a separate email due to message size limit
+        for (let i = 0; i < totalFiles; i++) {
+            const filePath = textFilePaths[i];
+            const fileName = path.basename(filePath);
+            
+            const today = new Date(); // Today
+            today.setHours(0, 0, 0, 0); // Today at 00:00:00
+            const endDate = new Date(today.getTime() - 24 * 60 * 60 * 1000); // one day before today
+            const startDate = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000)); // 6 days ago from endDate
+            const formatDate = (date) => date.toISOString().split('T')[0];  // Format Date only 
+
+            const mailOptions = {
+                from: process.env.EMAIL_FROM,
+                to: process.env.EMAIL_TO,
+                subject: `Audit Log Retrieval from ${formatDate(startDate)} to ${formatDate(endDate)} - Part ${i + 1} of ${totalFiles}`,
+                html: `
+                    <html>
+                        <body>
+                            <h2>Audit Log Retrieval from ${formatDate(startDate)} to ${formatDate(endDate)}</h2>
+                            <p>The audit log retrieval has been completed successfully.</p>
+                            <p>This is part ${i + 1} of ${totalFiles} total files.</p>
+                            <p>Please find the audit logs in the attached text file.</p>
+                        </body>
+                    </html>
+                `,
+                attachments: [
+                    {
+                        filename: fileName,
+                        path: filePath
+                    }
+                ]
+            };
+            
+            try {
+                const info = await transporter.sendMail(mailOptions);
+                console.log(`Email ${i + 1} sent successfully`);
+                
+            } catch (emailError) {
+                console.log(`Error sending email ${i + 1}: ${emailError.message}`);
+            }
+            
+            // Clean up the file after sending
+            try {
+                fs.unlinkSync(filePath);
+                console.log(`Temporary file deleted: ${fileName}`);
+            } catch (cleanupError) {
+                console.log(`Error deleting file ${fileName}: ${cleanupError.message}`);
+            }
+        }
         
         console.log('---End of Sending Email---');
-        return [`Email sent successfully to ${process.env.EMAIL_TO}`, `Message ID: ${info.messageId}`];
+        return [`Email sent successfully to ${process.env.EMAIL_TO} - ${totalFiles} emails`];
     } catch (error) {
         console.log(`Error during email sending: ${error.message}`);
         
         // Clean up file even if email fails
         try {
-            if (fs.existsSync(textFilePath)) {
-                fs.unlinkSync(textFilePath);
-            }
+            textFilePaths.forEach(filePath => {
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            });
         } catch (cleanupError) {
             console.log(`Error during file cleanup: ${cleanupError.message}`);
         }

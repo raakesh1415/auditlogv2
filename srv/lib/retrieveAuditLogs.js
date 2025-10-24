@@ -80,11 +80,10 @@ async function fetchAuditLogsWithPagination(accessToken) {
     // Set one day time
     const endTime = new Date();
     endTime.setHours(0, 0, 0, 0); // Start today
-    const startTime = new Date(endTime.getTime() - 24 * 60 * 60 * 1000); // Start yesterday
-    // const startTime = new Date(endTime.getTime() - ((24 * 60 * 60 * 1000) * 7)); // Start 7 days ago
+    const startTime = new Date(endTime.getTime() - ((24 * 60 * 60 * 1000) * 7)); // Start 7 days ago
     
     const timeFrom = startTime.toISOString().split('.')[0];   // format YYYY-MM-DDTHH24:MI:SS
-    const timeTo = endTime.toISOString().split('.')[0];  // format YYYY-MM-DDTHH24:MI:SS
+    const timeTo = endTime.toISOString().split('.')[0];   // format YYYY-MM-DDTHH24:MI:SS
     
     console.log(`Fetching audit logs from ${timeFrom} to ${timeTo}`);
     
